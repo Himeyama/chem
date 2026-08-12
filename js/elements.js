@@ -23,7 +23,7 @@ export const SUBSTANCES = {
   O2:  { formula: "O2",  name: "酸素",             molarMass: 32,  color: "#29b6f6", fact: "呼吸で吸っている気体そのもの" },
   O3:  { formula: "O3",  name: "オゾン",           molarMass: 48,  color: "#0288d1", fact: "上空でオゾン層を作り紫外線を防ぐ" },
   N2:  { formula: "N2",  name: "窒素",             molarMass: 28,  color: "#7e57c2", fact: "お菓子の袋の中に入っている気体" },
-  Cl2: { formula: "Cl2", name: "塩素",             molarMass: 71,  color: "#9ccc65", fact: "水道水の消毒に使われる気体" },
+  Cl2: { formula: "Cl2", name: "塩素",             molarMass: 71,  color: "#9ccc65", fact: "黄緑色で強い刺激臭のある有毒な気体" },
   F2:  { formula: "F2",  name: "フッ素",           molarMass: 38,  color: "#66bb6a", fact: "非常に反応しやすい気体" },
   S2:  { formula: "S2",  name: "二硫黄",           molarMass: 64,  color: "#fdd835", fact: "硫黄が蒸発するとできる分子" },
   S4:  { formula: "S4",  name: "四硫黄",           molarMass: 128, color: "#fbc02d", fact: "硫黄分子が集まる途中の姿" },
@@ -34,6 +34,7 @@ export const SUBSTANCES = {
   NO:   { formula: "NO",   name: "一酸化窒素",       molarMass: 30,  color: "#ba68c8", fact: "車の排気ガスにも含まれる気体" },
   NO2:  { formula: "NO2",  name: "二酸化窒素",       molarMass: 46,  color: "#8e24aa", fact: "光化学スモッグの原因になる赤褐色の気体" },
   HCl:  { formula: "HCl",  name: "塩化水素",         molarMass: 36.5, color: "#c5e1a5", fact: "水に溶けると胃液と同じ塩酸に！" },
+  HF:   { formula: "HF",   name: "フッ化水素",       molarMass: 20,  color: "#a5d6a7", fact: "ガラスを溶かすほど強い反応性を持つよ" },
   H2O:  { formula: "H2O",  name: "水",               molarMass: 18,  color: "#4fc3f7", fact: "生き物に欠かせない、いちばん身近な液体" },
   H2O2: { formula: "H2O2", name: "過酸化水素",       molarMass: 34,  color: "#4dd0e1", fact: "傷口の消毒液オキシドールの主成分" },
   CO:   { formula: "CO",   name: "一酸化炭素",       molarMass: 28,  color: "#a1887f", fact: "無色無臭だけどとても危険なガス" },
@@ -48,6 +49,9 @@ export const SUBSTANCES = {
   C2H2: { formula: "C2H2", name: "アセチレン",       molarMass: 26,  color: "#a1887f", fact: "溶接のガスバーナーに使われる気体" },
   C4H4: { formula: "C4H4", name: "シクロブタジエン", molarMass: 52,  color: "#8d6e63", fact: "アセチレンが2つくっついた不安定な分子" },
   C6H6: { formula: "C6H6", name: "ベンゼン",         molarMass: 78,  color: "#6d4c41", fact: "香水や合成繊維の原料になる芳香族の代表" },
+  CS2:  { formula: "CS2",  name: "二硫化炭素",       molarMass: 76,  color: "#c0ca33", fact: "ゴムや繊維の製造に使われる液体" },
+  NH:   { formula: "NH",   name: "イミドゲン",       molarMass: 15,  color: "#9575cd", fact: "アンモニアができる途中の不安定な分子" },
+  NH3:  { formula: "NH3",  name: "アンモニア",       molarMass: 17,  color: "#7e57c2", fact: "刺激臭のある気体で肥料の原料になるよ" },
 };
 
 // 反応レシピ: [反応物Aの物質ID, 反応物Bの物質ID, 生成物の物質ID, 反応エネルギー[kJ/mol]]
@@ -67,10 +71,12 @@ const RECIPES = [
   ["O2", "O", "O3", -106], // 吸熱反応(オゾン生成)
   ["C", "O", "CO", 111],
   ["CO", "O", "CO2", 283],
+  ["C", "O2", "CO2", 393.5], // 炭素の完全燃焼
   ["Ca", "O", "CaO", 635],
   ["N", "O", "NO", -90], // 吸熱反応(一酸化窒素生成)
   ["NO", "O", "NO2", 214], // 一酸化窒素が酸化されて二酸化窒素になる
   ["H", "Cl", "HCl", 432],
+  ["H", "F", "HF", 565],
   ["H2", "O", "H2O", 242],
 
   // 水素と酸素分子の反応
@@ -90,6 +96,13 @@ const RECIPES = [
 
   // 硫黄の燃焼
   ["S", "O2", "SO2", 297],
+
+  // 炭素と硫黄の化合
+  ["C", "S2", "CS2", -89], // 吸熱反応(二硫化炭素の生成)
+
+  // 窒素の水素化からアンモニアへ
+  ["N", "H", "NH", 391], // N-H結合の生成
+  ["NH", "H2", "NH3", 391], // アンモニア完成
 
   // 炭素の連鎖からベンゼンへ
   ["C", "C", "C2", 602],
@@ -113,7 +126,9 @@ export function findReaction(idA, idB) {
 }
 
 // ゲーム開始時にランダムに降ってくる初期物質(原子)のID一覧。
-export const INITIAL_SUBSTANCE_IDS = ["H", "O", "N", "C", "Cl", "Na", "F", "Ca", "S"];
+// Caは反応相手がO単体・F2・Cl2に限られ他の原子より合体しにくいため、
+// 配列に登場する回数を減らして出現頻度そのものを下げている(重み付き抽選)。
+export const INITIAL_SUBSTANCE_IDS = ["H", "H", "O", "N", "C", "Cl", "Cl", "Na", "F", "F", "Ca", "S"];
 
 // どの反応レシピにも「反応物」として登場しない物質のIDの集合。
 // これ以上他の物質と反応しない「終端物質」であり、game.js側で一定時間後に

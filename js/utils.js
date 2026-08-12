@@ -1,6 +1,6 @@
 // 半径・スコア変換などの共通関数。
 // 半径は sqrt(分子量) に比例させることで、面積(πr^2)が分子量に比例するようにする。
-const RADIUS_SCALE = 9.5;
+const RADIUS_SCALE = 8.5;
 const MIN_RADIUS = 22;
 
 export function radiusFor(molarMass) {
