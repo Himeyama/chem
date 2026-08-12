@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>化学反応</title>
+<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+</head>
+<body>
+
+<div class="score-bar">
+  <div class="score-label">スコア</div>
+  <div id="score" class="score-value">0</div>
+  <div class="highscore-label">ハイスコア: <span id="highscore">0</span></div>
+</div>
+
+<main class="game-wrap">
+  <div class="side-panel">
+    <div class="next-box">
+      <div class="next-label">次の物質</div>
+      <canvas id="nextCanvas" width="100" height="100"></canvas>
+      <div id="nextName" class="next-name"></div>
+      <div id="nextFact" class="next-fact"></div>
+    </div>
+    <div class="log-box">
+      <div class="log-label">反応式</div>
+      <div id="reactionLog" class="reaction-log"></div>
+    </div>
+  </div>
+
+  <div class="canvas-area">
+    <canvas id="gameCanvas" width="720" height="960"></canvas>
+    <div id="reactionPopup" class="reaction-popup"></div>
+  </div>
+</main>
+
+<div id="gameOverModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>ゲームオーバー</h2>
+    <p>最終スコア: <span id="finalScore">0</span></p>
+    <p>ハイスコア: <span id="finalHighscore">0</span></p>
+    <button id="retryButton">もう一度あそぶ</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
