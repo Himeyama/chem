@@ -52,6 +52,22 @@ export const SUBSTANCES = {
   CS2:  { formula: "CS2",  name: "二硫化炭素",       molarMass: 76,  color: "#c0ca33", fact: "ゴムや繊維の製造に使われる液体" },
   NH:   { formula: "NH",   name: "イミドゲン",       molarMass: 15,  color: "#9575cd", fact: "アンモニアができる途中の不安定な分子" },
   NH3:  { formula: "NH3",  name: "アンモニア",       molarMass: 17,  color: "#7e57c2", fact: "刺激臭のある気体で肥料の原料になるよ" },
+
+  // レア元素。ウランは核分裂の燃料、中性子はそれを引き起こす粒子。
+  U:   { formula: "U",   name: "ウラン原子",       molarMass: 238, color: "#43a047", fact: "原子力発電の燃料になる重い放射性元素" },
+  // 中性子は電荷を持たない粒子。分子量ではなく質量数1として扱い、見た目は小さくする。
+  n:   { formula: "n",   name: "中性子",           molarMass: 1,   color: "#eeeeee", fact: "原子核の中にある電気を帯びていない粒子" },
+
+  // ウランの核分裂で生まれる破片。
+  Y:   { formula: "Y",   name: "イットリウム原子", molarMass: 89,  color: "#26c6da", fact: "白色LEDや蛍光体に使われるレアメタル" },
+  I:   { formula: "I",   name: "ヨウ素原子",       molarMass: 127, color: "#5e35b1", fact: "うがい薬や海藻に含まれる紫色の元素" },
+
+  // ウランのフッ化物・塩化物(フッ素・塩素の逐次付加で生成)。
+  UF2: { formula: "UF2", name: "二フッ化ウラン",   molarMass: 276, color: "#4caf50", fact: "ウランにフッ素がつき始めた化合物" },
+  UF4: { formula: "UF4", name: "四フッ化ウラン",   molarMass: 314, color: "#66bb6a", fact: "「グリーンソルト」と呼ばれる緑色の粉末" },
+  UF6: { formula: "UF6", name: "六フッ化ウラン",   molarMass: 352, color: "#81c784", fact: "ウラン濃縮に使われる、気体になれるウラン化合物" },
+  UCl2:{ formula: "UCl2",name: "二塩化ウラン",     molarMass: 309, color: "#7cb342", fact: "ウランに塩素がつき始めた化合物" },
+  UCl4:{ formula: "UCl4",name: "四塩化ウラン",     molarMass: 380, color: "#9ccc65", fact: "緑色の結晶になるウランの塩化物" },
 };
 
 // 反応レシピ: [反応物Aの物質ID, 反応物Bの物質ID, 生成物の物質ID, 反応エネルギー[kJ/mol]]
@@ -104,12 +120,56 @@ const RECIPES = [
   ["N", "H", "NH", 391], // N-H結合の生成
   ["NH", "H2", "NH3", 391], // アンモニア完成
 
+  // ウランのフッ素化(ウラン濃縮で使う六フッ化ウランUF6へ逐次付加)
+  ["U", "F2", "UF2", 1100],
+  ["UF2", "F2", "UF4", 900],
+  ["UF4", "F2", "UF6", 500],
+  // ウランの塩素化
+  ["U", "Cl2", "UCl2", 800],
+  ["UCl2", "Cl2", "UCl4", 600],
+
   // 炭素の連鎖からベンゼンへ
   ["C", "C", "C2", 602],
   ["C2", "H2", "C2H2", 227], // アセチレン生成
   ["C2H2", "C2H2", "C4H4", 150], // アセチレンの二量化
   ["C4H4", "C2H2", "C6H6", 400], // アセチレンの三量化でベンゼンが完成(実際の工業的合成法)
 ];
+
+// 中性子はどの反応レシピにも「反応物」として登場させない。
+// 通常の合体反応(2物質→1物質)ではなく、game.js側で特別扱いする「核分裂」の
+// トリガーとしてのみ使うため。以下は中性子がぶつかったときに核分裂する物質の定義。
+// トリガー物質ID → { fragments: [生成核種ID...], neutrons: 放出中性子数, energyKJ: 反応エネルギー }
+export const FISSION_TARGETS = {
+  // ウラン + 中性子 → イットリウム + ヨウ素 + 中性子2個(核分裂の代表例)。
+  // 核分裂1回のエネルギーは約200MeV。1molあたりに換算すると
+  //   200e6 eV × 1.602e-19 J/eV × 6.022e23 /mol ≒ 1.93e13 J/mol = 1.93e10 kJ/mol
+  // 化学反応(数百kJ/mol)の約1億倍という、核エネルギーの桁違いの大きさを表す。
+  U: { fragments: ["Y", "I"], neutrons: 2, energyKJ: 1.93e10 },
+};
+
+// 中性子(すり抜ける特殊粒子)の物質ID。
+export const NEUTRON_ID = "n";
+
+export function isNeutron(id) {
+  return id === NEUTRON_ID;
+}
+
+// 他の物質を「すり抜ける」粒子の集合。中性子と、核分裂で飛び散る破片核種
+// (イットリウム・ヨウ素)が該当する。センサー化して重力を無視し直進させ、
+// 画面外に出たら消滅する(game.js側で扱う)。
+const PASSTHROUGH_IDS = new Set([NEUTRON_ID]);
+for (const { fragments } of Object.values(FISSION_TARGETS)) {
+  for (const id of fragments) PASSTHROUGH_IDS.add(id);
+}
+
+export function isPassthrough(id) {
+  return PASSTHROUGH_IDS.has(id);
+}
+
+// 中性子が id の物質に当たったときの核分裂結果を返す。核分裂しなければ null。
+export function findFission(id) {
+  return FISSION_TARGETS[id] ?? null;
+}
 
 // 反応検索を高速化するためのマップ。キーは "物質IDA|物質IDB" (アルファベット順に正規化)。
 const REACTION_MAP = new Map();
@@ -128,18 +188,41 @@ export function findReaction(idA, idB) {
 // ゲーム開始時にランダムに降ってくる初期物質(原子)のID一覧。
 // Caは反応相手がO単体・F2・Cl2に限られ他の原子より合体しにくいため、
 // 配列に登場する回数を減らして出現頻度そのものを下げている(重み付き抽選)。
-export const INITIAL_SUBSTANCE_IDS = ["H", "H", "O", "N", "C", "Cl", "Cl", "Na", "F", "F", "Ca", "S"];
+//
+// レア元素の中性子(n)は「炭素の半分」、ウラン(U)はさらにその半分
+// (=炭素の1/4)の出現頻度にしたい。重み付き抽選なので、配列に登場する回数で
+// 頻度を表す。基準として炭素(C)を4回登場させ、中性子はその半分の2回、
+// ウランはさらに半分の1回にしている。他の既存元素も比率を保つため4倍にしている。
+export const INITIAL_SUBSTANCE_IDS = [
+  "H", "H", "H", "H", "H", "H", "H", "H",
+  "O", "O", "O", "O",
+  "N", "N", "N", "N",
+  "C", "C", "C", "C",
+  "Cl", "Cl", "Cl", "Cl", "Cl", "Cl", "Cl", "Cl",
+  "Na", "Na", "Na", "Na",
+  "F", "F", "F", "F", "F", "F", "F", "F",
+  "Ca", "Ca", "Ca", "Ca",
+  "S", "S", "S", "S",
+  "n", "n", // レア: 炭素の半分の頻度
+  "U", // レア: 中性子のさらに半分(炭素の1/4)の頻度
+];
 
 // どの反応レシピにも「反応物」として登場しない物質のIDの集合。
 // これ以上他の物質と反応しない「終端物質」であり、game.js側で一定時間後に
 // 自動消滅させる対象として扱う。
+// ウランはフッ素(F2)・塩素(Cl2)の反応物なので自動的に終端物質から外れ、
+// 生成物のUF6・UCl4などが終端物質(=一定時間で消滅)になる。
+// 中性子・核分裂の破片(Y・I)はすり抜けて画面外で消える特殊粒子なので、
+// 時間経過で消える終端物質からは除外する。
 const REACTANT_IDS = new Set();
 for (const [a, b] of RECIPES) {
   REACTANT_IDS.add(a);
   REACTANT_IDS.add(b);
 }
 export const TERMINAL_SUBSTANCE_IDS = new Set(
-  Object.keys(SUBSTANCES).filter((id) => !REACTANT_IDS.has(id))
+  Object.keys(SUBSTANCES).filter(
+    (id) => !REACTANT_IDS.has(id) && !isPassthrough(id)
+  )
 );
 
 export function isTerminalSubstance(id) {

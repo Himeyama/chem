@@ -65,10 +65,10 @@ body {
 
 .score-bar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 6px 10px;
+  gap: 6px 28px;
   background: #262b36;
   border-radius: 10px;
   padding: 10px 16px;

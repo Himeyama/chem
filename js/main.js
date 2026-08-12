@@ -19,6 +19,10 @@ function startGame() {
       ui.addReactionLog(substanceIdA, substanceIdB, productId);
       ui.showReactionPopup(substanceIdA, substanceIdB, productId, enthalpyKJ, points);
     },
+    onFission: (targetId, neutronId, fragmentIds, neutronCount, energyKJ, points) => {
+      ui.addFissionLog(targetId, neutronId, fragmentIds, neutronCount);
+      ui.showFissionPopup(targetId, neutronId, fragmentIds, neutronCount, energyKJ, points);
+    },
     onNextChange: (substanceId) => {
       ui.updateNext(substanceId);
     },
