@@ -2,7 +2,7 @@
 import {
   SUBSTANCES,
   INITIAL_SUBSTANCE_IDS,
-  findReaction,
+  REACTIONS,
   isTerminalSubstance,
   isNeutron,
   isPassthrough,
@@ -17,7 +17,10 @@ const { World, Bodies, Body, Events, Runner } = Matter;
 const OVER_LINE_GRACE_MS = 1500;
 const TERMINAL_LIFETIME_MS = 3000; // 終端物質が反応しないまま画面に残っていられる時間
 const VANISH_FADE_MS = 500; // 消滅までのフェードアウト時間
-const VANISH_BONUS = 30;
+// すり抜け粒子(中性子・核分裂の破片)が画面内で止まっても必ず消えるための寿命。
+// 通常は無重力で直進して画面外に出るが、他の玉に阻まれるなどで画面内に漂い続けた
+// 場合の保険として、生成から一定時間経ったら画面外に出ていなくても消す。
+const PASSTHROUGH_LIFETIME_MS = 4000;
 
 export class Game {
   constructor(canvas, callbacks) {
@@ -137,6 +140,9 @@ export class Game {
       radius: r,
       passthrough,
       overLineSince: null,
+      // すり抜ける粒子は基本的に画面外に出たら消えるが、画面内で止まった場合の
+      // 保険として生成時刻を記録し、一定時間経過でも消せるようにする。
+      spawnedAt: passthrough ? Date.now() : null,
       // すり抜ける粒子は時間ではなく画面外に出たら消える(残らず通り抜ける)。
       vanishAt: terminal ? Date.now() + TERMINAL_LIFETIME_MS : null,
     };
@@ -154,13 +160,79 @@ export class Game {
       // まず中性子による核分裂を判定する(中性子はすり抜けるので通常反応より優先)。
       if (this._tryFission(a, b)) continue;
 
-      const reaction = findReaction(a.plugin.molecule.substanceId, b.plugin.molecule.substanceId);
-      if (!reaction) continue;
+      // 衝突した2体を核として、接触している近くの物質まで含めたクラスタから
+      // マッチするレシピ(3体反応など)を探す。より多くの物質を消費するレシピを
+      // 優先し、なければ2体反応にフォールバックする。
+      const match = this._findClusterReaction(a, b);
+      if (!match) continue;
 
-      this.pendingMerge.add(a.id);
-      this.pendingMerge.add(b.id);
-      this._mergeBodies(a, b, reaction);
+      for (const body of match.bodies) this.pendingMerge.add(body.id);
+      this._mergeBodies(match.bodies, match.reaction);
     }
+  }
+
+  // a・bを核に、接触中の物質を集めてマッチする反応を探す。
+  // 見つかれば { bodies:[反応に使う物体...], reaction } を返す。なければ null。
+  _findClusterReaction(a, b) {
+    // 核の2体に、a・bそれぞれに接触している他の物質を加えて候補プールを作る。
+    const pool = [a, b];
+    const seen = new Set([a.id, b.id]);
+    for (const core of [a, b]) {
+      for (const other of this._contactBodies(core)) {
+        if (seen.has(other.id) || this.pendingMerge.has(other.id)) continue;
+        seen.add(other.id);
+        pool.push(other);
+      }
+    }
+
+    // 物質IDごとに、プール内の物体をまとめておく(必要個数だけ取り出すため)。
+    const byId = new Map();
+    for (const body of pool) {
+      const id = body.plugin.molecule.substanceId;
+      if (!byId.has(id)) byId.set(id, []);
+      byId.get(id).push(body);
+    }
+
+    // REACTIONS は size 降順なので、消費数が多い(=難しい)反応から順に当てていく。
+    // 核のa・bを必ず含むレシピだけを採用する(衝突した2体が関与しない反応は起こさない)。
+    for (const reaction of REACTIONS) {
+      const bodies = this._collectReactants(reaction, byId, a, b);
+      if (bodies) return { bodies, reaction };
+    }
+    return null;
+  }
+
+  // reaction が要求する反応物(counts)を byId から集められれば、その物体配列を返す。
+  // 集めた物体には核 a・b が必ず含まれていなければならない(なければ null)。
+  _collectReactants(reaction, byId, a, b) {
+    const bodies = [];
+    for (const [id, need] of reaction.counts) {
+      const available = byId.get(id);
+      if (!available || available.length < need) return null;
+      // a・bが候補にあれば優先的に選び、核が確実に反応へ加わるようにする。
+      const sorted = [...available].sort((x, y) => {
+        const xCore = x === a || x === b ? 0 : 1;
+        const yCore = y === a || y === b ? 0 : 1;
+        return xCore - yCore;
+      });
+      for (let i = 0; i < need; i++) bodies.push(sorted[i]);
+    }
+    if (!bodies.includes(a) || !bodies.includes(b)) return null;
+    return bodies;
+  }
+
+  // core に物理的に接触している(=Matter.jsのペアが存在する)物体を列挙する。
+  _contactBodies(core) {
+    const result = [];
+    for (const pair of this.engine.pairs.list) {
+      if (!pair.isActive) continue;
+      let other = null;
+      if (pair.bodyA === core) other = pair.bodyB;
+      else if (pair.bodyB === core) other = pair.bodyA;
+      else continue;
+      if (other.plugin.molecule) result.push(other);
+    }
+    return result;
   }
 
   // a・bのどちらかが中性子で、もう片方が核分裂する物質なら核分裂を起こす。
@@ -249,26 +321,39 @@ export class Game {
     }
   }
 
-  _mergeBodies(a, b, reaction) {
-    const substanceIdA = a.plugin.molecule.substanceId;
-    const substanceIdB = b.plugin.molecule.substanceId;
-    const midX = (a.position.x + b.position.x) / 2;
-    const midY = (a.position.y + b.position.y) / 2;
+  // 反応物(bodies)を消し、生成物(reaction.products)を反応位置に生成する。
+  // 反応物・生成物ともに個数可変(N体反応・複数生成物)に対応する。
+  _mergeBodies(bodies, reaction) {
+    const reactantIds = bodies.map((body) => body.plugin.molecule.substanceId);
+    // 反応物の重心を生成位置の基準にする。
+    const midX = bodies.reduce((sum, body) => sum + body.position.x, 0) / bodies.length;
+    const midY = bodies.reduce((sum, body) => sum + body.position.y, 0) / bodies.length;
 
-    World.remove(this.world, [a, b]);
-    this.pendingMerge.delete(a.id);
-    this.pendingMerge.delete(b.id);
+    World.remove(this.world, bodies);
+    for (const body of bodies) this.pendingMerge.delete(body.id);
 
-    const newBody = this._spawnBody(reaction.product, midX, midY, {
-      restitution: 0.15,
-      friction: 0.4,
+    // 生成物が複数あるときは重心の周りに少しずつ位置をずらして重なりを避ける。
+    const products = reaction.products;
+    products.forEach((productId, i) => {
+      const angle = products.length > 1 ? (Math.PI * 2 * i) / products.length : 0;
+      const spread = products.length > 1 ? 14 : 0;
+      const newBody = this._spawnBody(
+        productId,
+        midX + Math.cos(angle) * spread,
+        midY + Math.sin(angle) * spread,
+        { restitution: 0.15, friction: 0.4 }
+      );
+      // 生成物は互いに少し離れる向きへ、全体としては上向きに跳ねる初速を与える。
+      Body.setVelocity(newBody, {
+        x: Math.cos(angle) * 1.5 + (Math.random() - 0.5) * 1.5,
+        y: Math.sin(angle) * 1.5 - 1,
+      });
+      Body.setAngularVelocity(newBody, (Math.random() - 0.5) * 0.05);
     });
-    Body.setVelocity(newBody, { x: (Math.random() - 0.5) * 1.5, y: -1 });
-    Body.setAngularVelocity(newBody, (Math.random() - 0.5) * 0.05);
 
     const pts = pointsFor(reaction.enthalpyKJ);
     this._addScore(pts);
-    this.callbacks.onReaction(substanceIdA, substanceIdB, reaction.product, reaction.enthalpyKJ, pts);
+    this.callbacks.onReaction(reactantIds, products, reaction.enthalpyKJ, pts);
   }
 
   _addScore(delta) {
@@ -288,25 +373,30 @@ export class Game {
     }
   }
 
-  // 画面外に出たすり抜け粒子を消す(残らず通り抜ける)。
+  // 画面外に出たすり抜け粒子を消す(残らず通り抜ける)。画面内で止まってしまった
+  // 粒子も、生成から PASSTHROUGH_LIFETIME_MS 経てば保険として消す。
   _removeStrayPassthrough() {
     const margin = 60;
+    const now = Date.now();
     for (const body of this.world.bodies) {
       const molecule = body.plugin.molecule;
       if (!molecule || !molecule.passthrough) continue;
       const { x, y } = body.position;
-      if (
+      const offscreen =
         x < -margin ||
         x > CANVAS_WIDTH + margin ||
         y < -margin ||
-        y > CANVAS_HEIGHT + margin
-      ) {
+        y > CANVAS_HEIGHT + margin;
+      const expired =
+        molecule.spawnedAt != null && now - molecule.spawnedAt > PASSTHROUGH_LIFETIME_MS;
+      if (offscreen || expired) {
         World.remove(this.world, body);
       }
     }
   }
 
   // 終端物質(これ以上反応しない物質)を、一定時間経過後にフェードアウトさせて消滅させる。
+  // 放置して消しても加点はしない(反応で消すことを促すため、放置プレイに報酬を与えない)。
   _checkVanish() {
     const now = Date.now();
     const bodies = this.world.bodies.filter(
@@ -317,7 +407,6 @@ export class Game {
       if (this.pendingMerge.has(body.id)) continue;
       if (now >= body.plugin.molecule.vanishAt) {
         World.remove(this.world, body);
-        this._addScore(VANISH_BONUS);
       }
     }
   }

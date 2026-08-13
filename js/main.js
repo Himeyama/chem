@@ -15,9 +15,9 @@ function startGame() {
       ui.updateScore(total);
       ui.flashScore(delta);
     },
-    onReaction: (substanceIdA, substanceIdB, productId, enthalpyKJ, points) => {
-      ui.addReactionLog(substanceIdA, substanceIdB, productId);
-      ui.showReactionPopup(substanceIdA, substanceIdB, productId, enthalpyKJ, points);
+    onReaction: (reactantIds, productIds, enthalpyKJ, points) => {
+      ui.addReactionLog(reactantIds, productIds);
+      ui.showReactionPopup(reactantIds, productIds, enthalpyKJ, points);
     },
     onFission: (targetId, neutronId, fragmentIds, neutronCount, energyKJ, points) => {
       ui.addFissionLog(targetId, neutronId, fragmentIds, neutronCount);

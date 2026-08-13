@@ -43,13 +43,34 @@ export class UI {
     if (delta < 0) this.scoreEl.classList.add("penalty");
   }
 
+  // 物質IDの配列を「2NaF」のように係数付きの項の並びにまとめてTeX化する。
+  // 同じ物質が複数あれば係数(2,3...)にまとめ、登場順を保って " + " で連結する。
+  _termsToTeX(ids) {
+    const counts = new Map();
+    const order = [];
+    for (const id of ids) {
+      if (!counts.has(id)) order.push(id);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return order
+      .map((id) => {
+        const n = counts.get(id);
+        const tex = formulaToTeX(SUBSTANCES[id].formula);
+        return n > 1 ? `${n}${tex}` : tex;
+      })
+      .join(" + ");
+  }
+
+  // 反応物ID配列・生成物ID配列から係数付きの反応式TeXを組み立てる。
+  _reactionEquationTeX(reactantIds, productIds) {
+    return `${this._termsToTeX(reactantIds)} \\rightarrow ${this._termsToTeX(productIds)}`;
+  }
+
   // 衝突で反応が起きたとき、ゲーム画面中央にTeX形式の反応式とエネルギー量を表示する。
-  showReactionPopup(substanceIdA, substanceIdB, productId, enthalpyKJ, points) {
+  showReactionPopup(reactantIds, productIds, enthalpyKJ, points) {
     clearTimeout(this.popupTimer);
 
-    const tex = [substanceIdA, substanceIdB, productId]
-      .map((id) => formulaToTeX(SUBSTANCES[id].formula));
-    const equation = `${tex[0]} + ${tex[1]} \\rightarrow ${tex[2]}`;
+    const equation = this._reactionEquationTeX(reactantIds, productIds);
     const verb = enthalpyKJ >= 0 ? "放出" : "吸収";
     const sign = points >= 0 ? "+" : "";
 
@@ -65,7 +86,8 @@ export class UI {
     this.popupEl.appendChild(equationEl);
     this.popupEl.appendChild(energyEl);
 
-    const product = SUBSTANCES[productId];
+    // 代表生成物(先頭)の豆知識を表示する。
+    const product = SUBSTANCES[productIds[0]];
     if (product.fact) {
       const factEl = document.createElement("div");
       factEl.className = "popup-fact";
@@ -80,10 +102,8 @@ export class UI {
   }
 
   // 反応式をTeX整形して反応ログの先頭に積み上げる。
-  addReactionLog(substanceIdA, substanceIdB, productId) {
-    const tex = [substanceIdA, substanceIdB, productId]
-      .map((id) => formulaToTeX(SUBSTANCES[id].formula));
-    const equation = `${tex[0]} + ${tex[1]} \\rightarrow ${tex[2]}`;
+  addReactionLog(reactantIds, productIds) {
+    const equation = this._reactionEquationTeX(reactantIds, productIds);
 
     const entry = document.createElement("div");
     entry.className = "log-entry";

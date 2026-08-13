@@ -9,15 +9,11 @@
 // 物質定義。formula は表示用の化学式、molarMass は分子量、
 // color はCanvas描画時の色、fact は「次の物質」欄の下に表示する身近な豆知識コメント。
 export const SUBSTANCES = {
-  H:   { formula: "H",   name: "水素原子",         molarMass: 1,   color: "#4fc3f7", fact: "宇宙で一番たくさんある元素だよ" },
-  O:   { formula: "O",   name: "酸素原子",         molarMass: 16,  color: "#29b6f6", fact: "私たちが呼吸に使う元素" },
-  N:   { formula: "N",   name: "窒素原子",         molarMass: 14,  color: "#7e57c2", fact: "空気の約8割を占めている元素" },
-  C:   { formula: "C",   name: "炭素原子",         molarMass: 12,  color: "#8d6e63", fact: "ダイヤモンドも鉛筆の芯も炭素" },
-  Cl:  { formula: "Cl",  name: "塩素原子",         molarMass: 35.5, color: "#9ccc65", fact: "プールの消毒に使われるよ" },
-  Na:  { formula: "Na",  name: "ナトリウム原子",   molarMass: 23,  color: "#ffa726", fact: "水に入れると激しく反応する金属" },
-  F:   { formula: "F",   name: "フッ素原子",       molarMass: 19,  color: "#66bb6a", fact: "歯磨き粉に入っていることがあるよ" },
-  Ca:  { formula: "Ca",  name: "カルシウム原子",   molarMass: 40,  color: "#bdbdbd", fact: "骨や歯を作るミネラル" },
-  S:   { formula: "S",   name: "硫黄原子",         molarMass: 32,  color: "#fdd835", fact: "マッチや火薬の材料になる黄色い元素" },
+  // 降ってくる素材。単体で存在しない元素は二原子分子(H2,N2,O2,F2,Cl2,S2)で扱い、
+  // 金属・固体として単体で存在するC・Na・Ca・Uだけを単原子で登場させる。
+  C:   { formula: "C",   name: "炭素",             molarMass: 12,  color: "#8d6e63", fact: "ダイヤモンドも鉛筆の芯も炭素" },
+  Na:  { formula: "Na",  name: "ナトリウム",       molarMass: 23,  color: "#ffa726", fact: "水に入れると激しく反応する金属" },
+  Ca:  { formula: "Ca",  name: "カルシウム",       molarMass: 40,  color: "#bdbdbd", fact: "骨や歯を作るミネラル" },
 
   H2:  { formula: "H2",  name: "水素",             molarMass: 2,   color: "#4fc3f7", fact: "燃料電池車の燃料になるよ" },
   O2:  { formula: "O2",  name: "酸素",             molarMass: 32,  color: "#29b6f6", fact: "呼吸で吸っている気体そのもの" },
@@ -29,7 +25,6 @@ export const SUBSTANCES = {
   S4:  { formula: "S4",  name: "四硫黄",           molarMass: 128, color: "#fbc02d", fact: "硫黄分子が集まる途中の姿" },
   S6:  { formula: "S6",  name: "六硫黄",           molarMass: 192, color: "#fdd835", fact: "環状構造をもつ硫黄の同素体" },
   S8:  { formula: "S8",  name: "硫黄(環状分子)",   molarMass: 256, color: "#f9a825", fact: "マッチや花火の材料になる硫黄の姿" },
-  C2:  { formula: "C2",  name: "二炭素",           molarMass: 24,  color: "#795548", fact: "炭素同士が結びついた不安定な分子" },
 
   NO:   { formula: "NO",   name: "一酸化窒素",       molarMass: 30,  color: "#ba68c8", fact: "車の排気ガスにも含まれる気体" },
   NO2:  { formula: "NO2",  name: "二酸化窒素",       molarMass: 46,  color: "#8e24aa", fact: "光化学スモッグの原因になる赤褐色の気体" },
@@ -47,10 +42,8 @@ export const SUBSTANCES = {
   "Ca(OH)2": { formula: "Ca(OH)2", name: "水酸化カルシウム(消石灰)", molarMass: 74, color: "#f5f5f5", fact: "校庭のライン引きに使われる消石灰" },
   SO2:  { formula: "SO2",  name: "二酸化硫黄",       molarMass: 64,  color: "#ffee58", fact: "火山ガスや酸性雨のもとになる気体" },
   C2H2: { formula: "C2H2", name: "アセチレン",       molarMass: 26,  color: "#a1887f", fact: "溶接のガスバーナーに使われる気体" },
-  C4H4: { formula: "C4H4", name: "シクロブタジエン", molarMass: 52,  color: "#8d6e63", fact: "アセチレンが2つくっついた不安定な分子" },
   C6H6: { formula: "C6H6", name: "ベンゼン",         molarMass: 78,  color: "#6d4c41", fact: "香水や合成繊維の原料になる芳香族の代表" },
   CS2:  { formula: "CS2",  name: "二硫化炭素",       molarMass: 76,  color: "#c0ca33", fact: "ゴムや繊維の製造に使われる液体" },
-  NH:   { formula: "NH",   name: "イミドゲン",       molarMass: 15,  color: "#9575cd", fact: "アンモニアができる途中の不安定な分子" },
   NH3:  { formula: "NH3",  name: "アンモニア",       molarMass: 17,  color: "#7e57c2", fact: "刺激臭のある気体で肥料の原料になるよ" },
 
   // レア元素。ウランは核分裂の燃料、中性子はそれを引き起こす粒子。
@@ -70,69 +63,63 @@ export const SUBSTANCES = {
   UCl4:{ formula: "UCl4",name: "四塩化ウラン",     molarMass: 380, color: "#9ccc65", fact: "緑色の結晶になるウランの塩化物" },
 };
 
-// 反応レシピ: [反応物Aの物質ID, 反応物Bの物質ID, 生成物の物質ID, 反応エネルギー[kJ/mol]]
+// 反応レシピ: [ [反応物ID...], [生成物ID...], 反応エネルギー[kJ/mol] ]
+// 反応物・生成物ともに配列で、個数を並べて書く(N体反応・複数生成物に対応)。
+//   例: 2Na + F2 -> 2NaF は [["Na", "Na", "F2"], ["NaF", "NaF"], ...] と書く。
 // 反応エネルギーは高校化学レベルの代表的な値を参考にした概算値。
 // 発熱(正の値)はスコア加点、吸熱(負の値)は減点になる(game.jsのpointsFor()で変換)。
-// 反応物の順序は問わない(衝突判定時にどちらの並びでもマッチする)。
+// 反応物の並び順は問わない(衝突判定時に多重集合として一致すればマッチする)。
 const RECIPES = [
-  // 単体分子の生成(結合エネルギー)
-  ["H", "H", "H2", 436],
-  ["O", "O", "O2", 498],
-  ["N", "N", "N2", 945],
-  ["Cl", "Cl", "Cl2", 243],
-  ["F", "F", "F2", 158],
-  ["S", "S", "S2", 425],
+  // 酸素まわり(すべて実際の化学反応式どおり、原子数保存を満たす)
+  [["O2", "O2", "O2"], ["O3", "O3"], -286], // 3O2 -> 2O3(吸熱: オゾン生成)
+  [["C", "C", "O2"], ["CO", "CO"], 221], // 2C + O2 -> 2CO
+  [["CO", "CO", "O2"], ["CO2", "CO2"], 566], // 2CO + O2 -> 2CO2
+  [["C", "O2"], ["CO2"], 393.5], // C + O2 -> CO2(炭素の完全燃焼)
+  [["Ca", "Ca", "O2"], ["CaO", "CaO"], 1270], // 2Ca + O2 -> 2CaO
 
-  // 酸素の逐次付加
-  ["O2", "O", "O3", -106], // 吸熱反応(オゾン生成)
-  ["C", "O", "CO", 111],
-  ["CO", "O", "CO2", 283],
-  ["C", "O2", "CO2", 393.5], // 炭素の完全燃焼
-  ["Ca", "O", "CaO", 635],
-  ["N", "O", "NO", -90], // 吸熱反応(一酸化窒素生成)
-  ["NO", "O", "NO2", 214], // 一酸化窒素が酸化されて二酸化窒素になる
-  ["H", "Cl", "HCl", 432],
-  ["H", "F", "HF", 565],
-  ["H2", "O", "H2O", 242],
+  // 窒素酸化物
+  [["N2", "O2"], ["NO", "NO"], -180], // N2 + O2 -> 2NO(吸熱)
+  [["NO", "NO", "O2"], ["NO2", "NO2"], 428], // 2NO + O2 -> 2NO2
 
-  // 水素と酸素分子の反応
-  ["H2", "O2", "H2O2", 136],
+  // 水素・ハロゲン化水素・水
+  [["H2", "Cl2"], ["HCl", "HCl"], 185], // H2 + Cl2 -> 2HCl
+  [["H2", "F2"], ["HF", "HF"], 542], // H2 + F2 -> 2HF
+  [["H2", "H2", "O2"], ["H2O", "H2O"], 484], // 2H2 + O2 -> 2H2O
+  [["H2", "O2"], ["H2O2"], 136], // H2 + O2 -> H2O2(過酸化水素)
 
   // ナトリウム・カルシウムの化合物
-  ["Na", "F", "NaF", 573],
-  ["Na", "Cl", "NaCl", 411],
-  ["Ca", "F2", "CaF2", 1228],
-  ["Ca", "Cl2", "CaCl2", 795],
-  ["CaO", "H2O", "Ca(OH)2", 65], // 水和熱(生石灰が水を吸って消石灰になる)
+  [["Na", "Na", "F2"], ["NaF", "NaF"], 1146], // 2Na + F2 -> 2NaF
+  [["Na", "Na", "Cl2"], ["NaCl", "NaCl"], 822], // 2Na + Cl2 -> 2NaCl
+  [["Ca", "F2"], ["CaF2"], 1228], // Ca + F2 -> CaF2
+  [["Ca", "Cl2"], ["CaCl2"], 795], // Ca + Cl2 -> CaCl2
+  [["CaO", "H2O"], ["Ca(OH)2"], 65], // CaO + H2O -> Ca(OH)2(水和熱)
 
-  // 硫黄の重合
-  ["S2", "S2", "S4", 92],
-  ["S2", "S4", "S6", 95], // 環状六硫黄の生成
-  ["S4", "S4", "S8", 98],
+  // 硫黄の重合(分子どうしの反応なので原子数はそのまま保存される)
+  [["S2", "S2"], ["S4"], 92],
+  [["S2", "S4"], ["S6"], 95], // 環状六硫黄の生成
+  [["S4", "S4"], ["S8"], 98],
 
   // 硫黄の燃焼
-  ["S", "O2", "SO2", 297],
+  [["S2", "O2", "O2"], ["SO2", "SO2"], 594], // S2 + 2O2 -> 2SO2
 
   // 炭素と硫黄の化合
-  ["C", "S2", "CS2", -89], // 吸熱反応(二硫化炭素の生成)
+  [["C", "S2"], ["CS2"], -89], // C + S2 -> CS2(吸熱: 二硫化炭素)
 
-  // 窒素の水素化からアンモニアへ
-  ["N", "H", "NH", 391], // N-H結合の生成
-  ["NH", "H2", "NH3", 391], // アンモニア完成
+  // 窒素の水素化からアンモニアへ(ハーバー・ボッシュ法)。不安定な中間体を経ずに
+  // N2 + 3H2 -> 2NH3 の4体反応で一気にアンモニアを2個作る。
+  [["N2", "H2", "H2", "H2"], ["NH3", "NH3"], 92], // N2 + 3H2 -> 2NH3
 
   // ウランのフッ素化(ウラン濃縮で使う六フッ化ウランUF6へ逐次付加)
-  ["U", "F2", "UF2", 1100],
-  ["UF2", "F2", "UF4", 900],
-  ["UF4", "F2", "UF6", 500],
+  [["U", "F2"], ["UF2"], 1100],
+  [["UF2", "F2"], ["UF4"], 900],
+  [["UF4", "F2"], ["UF6"], 500],
   // ウランの塩素化
-  ["U", "Cl2", "UCl2", 800],
-  ["UCl2", "Cl2", "UCl4", 600],
+  [["U", "Cl2"], ["UCl2"], 800],
+  [["UCl2", "Cl2"], ["UCl4"], 600],
 
-  // 炭素の連鎖からベンゼンへ
-  ["C", "C", "C2", 602],
-  ["C2", "H2", "C2H2", 227], // アセチレン生成
-  ["C2H2", "C2H2", "C4H4", 150], // アセチレンの二量化
-  ["C4H4", "C2H2", "C6H6", 400], // アセチレンの三量化でベンゼンが完成(実際の工業的合成法)
+  // 炭素の連鎖からベンゼンへ。不安定なC2・C4H4は経由しない。
+  [["C", "C", "H2"], ["C2H2"], 227], // 2C + H2 -> C2H2(アセチレン)
+  [["C2H2", "C2H2", "C2H2"], ["C6H6"], 597], // 3C2H2 -> C6H6(アセチレンの三量化でベンゼン)
 ];
 
 // 中性子はどの反応レシピにも「反応物」として登場させない。
@@ -171,38 +158,67 @@ export function findFission(id) {
   return FISSION_TARGETS[id] ?? null;
 }
 
-// 反応検索を高速化するためのマップ。キーは "物質IDA|物質IDB" (アルファベット順に正規化)。
+// 反応検索を高速化するためのマップ。キーは反応物IDをソートして "|" で連結した
+// 多重集合キー(並び順を問わず、同じ物質が複数あってもそのまま個数が効く)。
 const REACTION_MAP = new Map();
-function reactionKey(idA, idB) {
-  return [idA, idB].sort().join("|");
-}
-for (const [a, b, product, enthalpyKJ] of RECIPES) {
-  REACTION_MAP.set(reactionKey(a, b), { product, enthalpyKJ });
+function reactantKey(ids) {
+  return [...ids].sort().join("|");
 }
 
-// substanceIdA, substanceIdB から反応結果を引く。反応がなければ null。
-export function findReaction(idA, idB) {
-  return REACTION_MAP.get(reactionKey(idA, idB)) ?? null;
+// 物質IDの配列を「物質ID→必要個数」のMapにする(多重集合のカウント)。
+function countMap(ids) {
+  const m = new Map();
+  for (const id of ids) m.set(id, (m.get(id) ?? 0) + 1);
+  return m;
 }
 
-// ゲーム開始時にランダムに降ってくる初期物質(原子)のID一覧。
-// Caは反応相手がO単体・F2・Cl2に限られ他の原子より合体しにくいため、
-// 配列に登場する回数を減らして出現頻度そのものを下げている(重み付き抽選)。
+// レシピが要求する反応物の個数(=クラスタから何体を消費するか)の最大値。
+// game.js側でクラスタ探索を打ち切る上限に使う。
+export let MAX_REACTANTS = 2;
+// game.js のクラスタ探索用に、反応物の必要個数(counts)を前計算した一覧。
+// 消費数が多い(=難しい)反応を優先して当てられるよう size 降順に並べておく。
+export const REACTIONS = [];
+for (const [reactants, products, enthalpyKJ] of RECIPES) {
+  REACTION_MAP.set(reactantKey(reactants), {
+    products,
+    enthalpyKJ,
+    size: reactants.length,
+  });
+  REACTIONS.push({
+    counts: countMap(reactants),
+    size: reactants.length,
+    products,
+    enthalpyKJ,
+  });
+  if (reactants.length > MAX_REACTANTS) MAX_REACTANTS = reactants.length;
+}
+REACTIONS.sort((a, b) => b.size - a.size);
+
+// 物質IDの配列(多重集合)にちょうど一致する反応を引く。なければ null。
+// 返り値には size(反応物の個数)も含む。
+export function findReactionForSet(ids) {
+  return REACTION_MAP.get(reactantKey(ids)) ?? null;
+}
+
+// ゲーム開始時にランダムに降ってくる初期物質のID一覧。単体で存在しない元素は
+// 二原子分子(H2,N2,O2,F2,Cl2,S2)で、金属・固体はそのまま単体(C,Na,Ca)で降らせる。
+// Caは反応相手がO2・F2・Cl2に限られ他より合体しにくいため、登場回数を減らして
+// 出現頻度そのものを下げている(重み付き抽選)。
 //
 // レア元素の中性子(n)は「炭素の半分」、ウラン(U)はさらにその半分
 // (=炭素の1/4)の出現頻度にしたい。重み付き抽選なので、配列に登場する回数で
 // 頻度を表す。基準として炭素(C)を4回登場させ、中性子はその半分の2回、
-// ウランはさらに半分の1回にしている。他の既存元素も比率を保つため4倍にしている。
+// ウランはさらに半分の1回にしている。他の既存物質も比率を保つため4倍にしている。
 export const INITIAL_SUBSTANCE_IDS = [
-  "H", "H", "H", "H", "H", "H", "H", "H",
-  "O", "O", "O", "O",
-  "N", "N", "N", "N",
+  "H2", "H2", "H2", "H2", "H2", "H2", "H2", "H2",
+  "O2", "O2", "O2", "O2",
+  "N2", "N2", "N2", "N2",
   "C", "C", "C", "C",
-  "Cl", "Cl", "Cl", "Cl", "Cl", "Cl", "Cl", "Cl",
+  "Cl2", "Cl2", "Cl2", "Cl2", "Cl2", "Cl2", "Cl2", "Cl2",
   "Na", "Na", "Na", "Na",
-  "F", "F", "F", "F", "F", "F", "F", "F",
+  "F2", "F2", "F2", "F2", "F2", "F2", "F2", "F2",
   "Ca", "Ca", "Ca", "Ca",
-  "S", "S", "S", "S",
+  "S2", "S2", "S2", "S2",
   "n", "n", // レア: 炭素の半分の頻度
   "U", // レア: 中性子のさらに半分(炭素の1/4)の頻度
 ];
@@ -215,9 +231,8 @@ export const INITIAL_SUBSTANCE_IDS = [
 // 中性子・核分裂の破片(Y・I)はすり抜けて画面外で消える特殊粒子なので、
 // 時間経過で消える終端物質からは除外する。
 const REACTANT_IDS = new Set();
-for (const [a, b] of RECIPES) {
-  REACTANT_IDS.add(a);
-  REACTANT_IDS.add(b);
+for (const [reactants] of RECIPES) {
+  for (const id of reactants) REACTANT_IDS.add(id);
 }
 export const TERMINAL_SUBSTANCE_IDS = new Set(
   Object.keys(SUBSTANCES).filter(
