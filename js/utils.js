@@ -1,10 +1,10 @@
 // 半径・スコア変換などの共通関数。
-// 半径は sqrt(分子量) に比例させることで、面積(πr^2)が分子量に比例するようにする。
-const RADIUS_SCALE = 8.5;
+// 半径は cbrt(分子量) に比例させることで、球の体積(4/3 π r^3)が分子量に比例するようにする。
+const RADIUS_SCALE = 13.8;
 const MIN_RADIUS = 22;
 
 export function radiusFor(molarMass) {
-  return Math.max(MIN_RADIUS, RADIUS_SCALE * Math.sqrt(molarMass));
+  return Math.max(MIN_RADIUS, RADIUS_SCALE * Math.cbrt(molarMass));
 }
 
 // 反応エネルギー[kJ/mol] を得点に変換する。1 kJ = 1000 ポイント。
