@@ -381,6 +381,16 @@ export function findReactionForSet(ids) {
   return REACTION_MAP.get(reactantKey(ids)) ?? null;
 }
 
+// 「遊び方」欄の反応式一覧を表示するための、元の記述順を保った反応レシピ一覧。
+// REACTIONS は counts(Map)化・size降順ソートされていて表示順が崩れるため、
+// RECIPES の並び(酸素まわり→窒素→…と話題ごとにまとまっている)をそのまま
+// { reactants, products, enthalpyKJ } の形で公開する。
+export const RECIPE_LIST = RECIPES.map(([reactants, products, enthalpyKJ]) => ({
+  reactants,
+  products,
+  enthalpyKJ,
+}));
+
 // ゲーム開始時にランダムに降ってくる初期物質のID一覧。単体で存在しない元素は
 // 二原子分子(H2,N2,O2,F2,Cl2,S2)で、金属・固体はそのまま単体(C,Na,Ca)で降らせる。
 // Caは反応相手がO2・F2・Cl2に限られ他より合体しにくいため、登場回数を減らして

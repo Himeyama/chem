@@ -234,6 +234,131 @@ body {
   margin-bottom: 0;
 }
 
+/* 反応式一覧＋解説の折り畳み(details/summary)。 */
+.help-details {
+  margin-top: 12px;
+  border-top: 1px solid #3a4150;
+  padding-top: 10px;
+}
+
+.help-details > summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #7dd3fc;
+  list-style: none;
+  user-select: none;
+}
+
+.help-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* summary の頭に開閉を示す三角を自前で付ける。開いたら回転させる。 */
+.help-details > summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.7em;
+  transition: transform 0.15s ease;
+}
+
+.help-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.help-details > summary:hover {
+  color: #a5dfff;
+}
+
+.reaction-reference {
+  margin-top: 12px;
+  /* 反応が多いので高さを制限してスクロールさせ、フッターが極端に伸びるのを防ぐ。 */
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+
+.ref-intro {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: #cfd6e0;
+  margin: 0 0 14px;
+}
+
+.ref-category {
+  margin-bottom: 18px;
+}
+
+.ref-category h3 {
+  font-size: 0.9rem;
+  color: #ffca28;
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #3a4150;
+}
+
+.ref-cat-intro {
+  font-size: 0.76rem;
+  line-height: 1.65;
+  color: #9aa4b2;
+  margin: 0 0 10px;
+}
+
+/* 反応式1本の行: 式(左)とエネルギー(右)。狭い画面では縦に折り返す。 */
+.ref-reaction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  background: #1c1f26;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.ref-equation {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ref-equation .katex {
+  font-size: 0.9rem;
+  color: #e8ecf1;
+}
+
+.ref-equation .katex-html {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.ref-energy {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* 発熱(加点)は緑系、吸熱(減点)は青系で色分けする。 */
+.ref-energy.exo {
+  background: rgba(102, 187, 106, 0.18);
+  color: #a5d6a7;
+}
+
+.ref-energy.endo {
+  background: rgba(79, 195, 247, 0.18);
+  color: #90caf9;
+}
+
+/* 導入文中でも色の凡例として使えるよう、インライン表示に耐える見た目にしておく。 */
+.ref-intro .ref-energy {
+  display: inline;
+  padding: 1px 6px;
+}
+
 .canvas-area {
   position: relative;
   /* グリッドのセル(列幅=--canvas-w, 行高さ=--canvas-h, 比率は720:960で一致)に収める。 */
@@ -373,6 +498,12 @@ body {
   }
   .log-box {
     display: none;
+  }
+  .reaction-reference {
+    max-height: 50vh;
+  }
+  .ref-equation .katex {
+    font-size: 0.8rem;
   }
 }
 

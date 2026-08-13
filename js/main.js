@@ -1,9 +1,14 @@
 import { Game } from "./game.js";
 import { UI } from "./ui.js";
+import { renderReactionReference } from "./reference.js";
 
 const canvas = document.getElementById("gameCanvas");
 const ui = new UI();
 let game = null;
+
+// 「遊び方」の折り畳みに入れる反応式一覧＋解説は内容が固定なので、
+// ゲーム開始とは切り離して一度だけ描画する。
+renderReactionReference(document.getElementById("reactionReference"));
 
 function startGame() {
   ui.hideGameOver();
