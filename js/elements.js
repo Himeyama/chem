@@ -83,6 +83,8 @@ export const SUBSTANCES = {
   Na2SO4:  { formula: "Na2SO4",  name: "硫酸ナトリウム", molarMass: 142, color: "#ffcc80", fact: "入浴剤やガラスの原料に使われる白い塩" },
   CaSO4:   { formula: "CaSO4",   name: "硫酸カルシウム", molarMass: 136, color: "#eeeeee", fact: "石こうボードやチョークの主成分" },
   Ag2SO4:  { formula: "Ag2SO4",  name: "硫酸銀",       molarMass: 312, color: "#90a4ae", fact: "銀を熱濃硫酸に溶かすとできる、水に溶けにくい塩" },
+  NaNO3:   { formula: "NaNO3",   name: "硝酸ナトリウム", molarMass: 85,  color: "#ffe0b2", fact: "チリ硝石として採れる、火薬や肥料の原料になる塩" },
+  "Ca(NO3)2": { formula: "Ca(NO3)2", name: "硝酸カルシウム", molarMass: 164, color: "#f0f4c3", fact: "肥料に使われる、水によく溶けるカルシウムの塩" },
   // 亜鉛を空気中で燃やすとできる酸化物。酸にも塩基にも溶ける両性酸化物。
   ZnO:     { formula: "ZnO",     name: "酸化亜鉛",     molarMass: 81,  color: "#fafafa", fact: "日焼け止めや化粧品に使われる白い粉。両性酸化物" },
   ZnCl2:   { formula: "ZnCl2",   name: "塩化亜鉛",     molarMass: 136, color: "#b0bec5", fact: "はんだ付けや乾電池に使われる亜鉛の塩" },
@@ -248,6 +250,11 @@ const RECIPES = [
    ["Zn(NO3)2", "Zn(NO3)2", "Zn(NO3)2", "NO", "NO", "H2O", "H2O", "H2O", "H2O"], 320], // 3Zn + 8HNO3 -> 3Zn(NO3)2 + 2NO + 4H2O
   // 鉄は希硝酸に溶けて3価の硝酸鉄(III)になる(濃硝酸では不動態化して溶けないが濃度は考慮しない)。
   [["Fe", "HNO3", "HNO3", "HNO3", "HNO3"], ["Fe(NO3)3", "NO", "H2O", "H2O"], 330], // Fe + 4HNO3 -> Fe(NO3)3 + NO + 2H2O
+
+  // Na・Caはイオン化傾向が非常に大きく、貴金属と違い酸化力を借りずとも硝酸と激しく反応して
+  // 水素(H2)を発生する(HCl・H2SO4との反応と同じパターン)。
+  [["Na", "Na", "HNO3", "HNO3"], ["NaNO3", "NaNO3", "H2"], 630], // 2Na + 2HNO3 -> 2NaNO3 + H2
+  [["Ca", "HNO3", "HNO3"], ["Ca(NO3)2", "H2"], 460], // Ca + 2HNO3 -> Ca(NO3)2 + H2
 
   // 銀を硫酸に溶かす。ゲームでは濃度を区別しないので溶ける方(=熱濃硫酸)で溶かし、SO2を出す。
   [["Ag", "Ag", "H2SO4", "H2SO4"], ["Ag2SO4", "SO2", "H2O", "H2O"], 80], // 2Ag + 2H2SO4 -> Ag2SO4 + SO2 + 2H2O
