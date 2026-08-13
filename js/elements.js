@@ -51,9 +51,16 @@ export const SUBSTANCES = {
   // 中性子は電荷を持たない粒子。分子量ではなく質量数1として扱い、見た目は小さくする。
   n:   { formula: "n",   name: "中性子",           molarMass: 1,   color: "#eeeeee", fact: "原子核の中にある電気を帯びていない粒子" },
 
-  // ウランの核分裂で生まれる破片。
+  // ウランの核分裂で生まれる破片(生成核種)。実際の核分裂は破片の組み合わせが
+  // 確率的に変わるので、代表的な分裂パターンぶんの核種を用意している。
   Y:   { formula: "Y",   name: "イットリウム原子", molarMass: 89,  color: "#26c6da", fact: "白色LEDや蛍光体に使われるレアメタル" },
   I:   { formula: "I",   name: "ヨウ素原子",       molarMass: 127, color: "#5e35b1", fact: "うがい薬や海藻に含まれる紫色の元素" },
+  Ba:  { formula: "Ba",  name: "バリウム原子",     molarMass: 141, color: "#4db6ac", fact: "胃のX線検査で飲むバリウムの正体" },
+  Kr:  { formula: "Kr",  name: "クリプトン原子",   molarMass: 92,  color: "#4dd0e1", fact: "白熱電球や照明に使われる希ガス" },
+  Xe:  { formula: "Xe",  name: "キセノン原子",     molarMass: 140, color: "#7986cb", fact: "自動車のヘッドライトにも使われる希ガス" },
+  Sr:  { formula: "Sr",  name: "ストロンチウム原子", molarMass: 94, color: "#4fc3f7", fact: "花火の赤い色を出すのに使われる金属" },
+  Cs:  { formula: "Cs",  name: "セシウム原子",     molarMass: 140, color: "#9575cd", fact: "原子時計に使われる、時間の基準になる元素" },
+  Rb:  { formula: "Rb",  name: "ルビジウム原子",   molarMass: 93,  color: "#7e57c2", fact: "水に触れると激しく反応するアルカリ金属" },
 
   // ウランのフッ化物・塩化物(フッ素・塩素の逐次付加で生成)。
   UF2: { formula: "UF2", name: "二フッ化ウラン",   molarMass: 276, color: "#4caf50", fact: "ウランにフッ素がつき始めた化合物" },
@@ -125,13 +132,30 @@ const RECIPES = [
 // 中性子はどの反応レシピにも「反応物」として登場させない。
 // 通常の合体反応(2物質→1物質)ではなく、game.js側で特別扱いする「核分裂」の
 // トリガーとしてのみ使うため。以下は中性子がぶつかったときに核分裂する物質の定義。
-// トリガー物質ID → { fragments: [生成核種ID...], neutrons: 放出中性子数, energyKJ: 反応エネルギー }
+//
+// トリガー物質ID → { outcomes: [分裂パターン...] }。
+// 実際の核分裂は破片核種の組み合わせが確率的に変わるので、代表的な分裂パターンを
+// 複数用意し、各パターンの weight(重み)で確率的に1つ選ぶ。
+// 各パターン: { fragments: [生成核種ID...], neutrons: 放出中性子数, weight: 相対確率 }
+//
+// 核分裂1回のエネルギーは約200MeV。1molあたりに換算すると
+//   200e6 eV × 1.602e-19 J/eV × 6.022e23 /mol ≒ 1.93e13 J/mol = 1.93e10 kJ/mol
+// 化学反応(数百kJ/mol)の約1億倍という、核エネルギーの桁違いの大きさを表す。
+// エネルギーはどのパターンでもほぼ同じなのでターゲット共通で持たせる。
 export const FISSION_TARGETS = {
-  // ウラン + 中性子 → イットリウム + ヨウ素 + 中性子2個(核分裂の代表例)。
-  // 核分裂1回のエネルギーは約200MeV。1molあたりに換算すると
-  //   200e6 eV × 1.602e-19 J/eV × 6.022e23 /mol ≒ 1.93e13 J/mol = 1.93e10 kJ/mol
-  // 化学反応(数百kJ/mol)の約1億倍という、核エネルギーの桁違いの大きさを表す。
-  U: { fragments: ["Y", "I"], neutrons: 2, energyKJ: 1.93e10 },
+  U: {
+    energyKJ: 1.93e10,
+    outcomes: [
+      // バリウム + クリプトン + 3n(教科書で最も有名なU-235の分裂)。
+      { fragments: ["Ba", "Kr"], neutrons: 3, weight: 4 },
+      // キセノン + ストロンチウム + 2n。
+      { fragments: ["Xe", "Sr"], neutrons: 2, weight: 3 },
+      // ヨウ素 + イットリウム + 2n。
+      { fragments: ["I", "Y"], neutrons: 2, weight: 2 },
+      // セシウム + ルビジウム + 2n。
+      { fragments: ["Cs", "Rb"], neutrons: 2, weight: 1 },
+    ],
+  },
 };
 
 // 中性子(すり抜ける特殊粒子)の物質ID。
@@ -142,11 +166,13 @@ export function isNeutron(id) {
 }
 
 // 他の物質を「すり抜ける」粒子の集合。中性子と、核分裂で飛び散る破片核種
-// (イットリウム・ヨウ素)が該当する。センサー化して重力を無視し直進させ、
-// 画面外に出たら消滅する(game.js側で扱う)。
+// (全ターゲット・全分裂パターンに登場する核種)が該当する。センサー化して重力を
+// 無視し直進させ、画面外に出たら消滅する(game.js側で扱う)。
 const PASSTHROUGH_IDS = new Set([NEUTRON_ID]);
-for (const { fragments } of Object.values(FISSION_TARGETS)) {
-  for (const id of fragments) PASSTHROUGH_IDS.add(id);
+for (const { outcomes } of Object.values(FISSION_TARGETS)) {
+  for (const { fragments } of outcomes) {
+    for (const id of fragments) PASSTHROUGH_IDS.add(id);
+  }
 }
 
 export function isPassthrough(id) {
@@ -154,8 +180,28 @@ export function isPassthrough(id) {
 }
 
 // 中性子が id の物質に当たったときの核分裂結果を返す。核分裂しなければ null。
+// 分裂パターンは weight に応じて確率的に1つ選び、game.js が扱いやすいよう
+// { fragments, neutrons, energyKJ } の形にして返す。
 export function findFission(id) {
-  return FISSION_TARGETS[id] ?? null;
+  const target = FISSION_TARGETS[id];
+  if (!target) return null;
+  const outcome = pickWeighted(target.outcomes);
+  return {
+    fragments: outcome.fragments,
+    neutrons: outcome.neutrons,
+    energyKJ: target.energyKJ,
+  };
+}
+
+// weight プロパティを持つ要素の配列から、重みに比例した確率で1つ選ぶ。
+function pickWeighted(items) {
+  const total = items.reduce((sum, item) => sum + item.weight, 0);
+  let r = Math.random() * total;
+  for (const item of items) {
+    r -= item.weight;
+    if (r < 0) return item;
+  }
+  return items[items.length - 1]; // 丸め誤差の保険
 }
 
 // 反応検索を高速化するためのマップ。キーは反応物IDをソートして "|" で連結した

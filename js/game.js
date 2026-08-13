@@ -38,9 +38,13 @@ export class Game {
     this.world = world;
     this.runner = Runner.create();
 
+    // 降ってくる物質の抽選プール。通常はINITIAL_SUBSTANCE_IDSだが、
+    // URLに ?debug=nuclear を付けたときは中性子とウランのみにして核分裂を試しやすくする。
+    this.dropPool = this._resolveDropPool();
+
     this.aimX = CANVAS_WIDTH / 2;
-    this.currentDropId = pickRandom(INITIAL_SUBSTANCE_IDS);
-    this.nextDropId = pickRandom(INITIAL_SUBSTANCE_IDS);
+    this.currentDropId = pickRandom(this.dropPool);
+    this.nextDropId = pickRandom(this.dropPool);
 
     this._setupCanvasResolution();
     this._bindEvents();
@@ -111,8 +115,15 @@ export class Game {
     }, 400);
 
     this.currentDropId = this.nextDropId;
-    this.nextDropId = pickRandom(INITIAL_SUBSTANCE_IDS);
+    this.nextDropId = pickRandom(this.dropPool);
     this._notifyNext();
+  }
+
+  // 降ってくる物質の抽選プールを決める。?debug=nuclear のときだけ中性子とウランに絞る。
+  _resolveDropPool() {
+    const debug = new URLSearchParams(window.location.search).get("debug");
+    if (debug === "nuclear") return [NEUTRON_ID, "U"];
+    return INITIAL_SUBSTANCE_IDS;
   }
 
   _notifyNext() {
