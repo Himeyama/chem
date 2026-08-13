@@ -7,6 +7,8 @@ import {
   isNeutron,
   isPassthrough,
   findFission,
+  findNeutronCapture,
+  findDecay,
   NEUTRON_ID,
 } from "./elements.js";
 import { createPhysics, CANVAS_WIDTH, CANVAS_HEIGHT, DANGER_LINE_Y } from "./physics.js";
@@ -68,6 +70,7 @@ export class Game {
     Events.on(this.engine, "beforeUpdate", () => this._cancelPassthroughGravity());
     Events.on(this.engine, "afterUpdate", () => {
       this._removeStrayPassthrough();
+      this._checkDecay();
       this._checkVanish();
       this._checkGameOver();
     });
@@ -119,10 +122,11 @@ export class Game {
     this._notifyNext();
   }
 
-  // 降ってくる物質の抽選プールを決める。?debug=nuclear のときだけ中性子とウランに絞る。
+  // 降ってくる物質の抽選プールを決める。?debug=nuclear のときだけ中性子とウラン
+  // 同位体(U235・U238)に絞り、核分裂と中性子捕獲→崩壊の両方を試せるようにする。
   _resolveDropPool() {
     const debug = new URLSearchParams(window.location.search).get("debug");
-    if (debug === "nuclear") return [NEUTRON_ID, "U"];
+    if (debug === "nuclear") return [NEUTRON_ID, "U235", "U238"];
     return INITIAL_SUBSTANCE_IDS;
   }
 
@@ -146,6 +150,8 @@ export class Game {
       ...extraOptions,
     });
     const terminal = !passthrough && isTerminalSubstance(substanceId);
+    // 時間差で別核種に崩壊する物質(U239→Pu239など)は崩壊時刻と崩壊先を記録する。
+    const decay = findDecay(substanceId);
     body.plugin.molecule = {
       substanceId,
       radius: r,
@@ -156,6 +162,9 @@ export class Game {
       spawnedAt: passthrough ? Date.now() : null,
       // すり抜ける粒子は時間ではなく画面外に出たら消える(残らず通り抜ける)。
       vanishAt: terminal ? Date.now() + TERMINAL_LIFETIME_MS : null,
+      // 時間差崩壊。decayAtを過ぎたらdecayToの核種へ置き換わる。
+      decayAt: decay ? Date.now() + decay.afterMs : null,
+      decayTo: decay ? decay.to : null,
     };
     World.add(this.world, body);
     return body;
@@ -246,8 +255,8 @@ export class Game {
     return result;
   }
 
-  // a・bのどちらかが中性子で、もう片方が核分裂する物質なら核分裂を起こす。
-  // 起こしたら true を返す。
+  // a・bのどちらかが中性子で、もう片方が核反応する物質なら核反応を起こす。
+  // 核分裂(U235・Pu239)か中性子捕獲(U238→U239)のどちらかを起こしたら true を返す。
   _tryFission(a, b) {
     let neutronBody = null;
     let targetBody = null;
@@ -260,16 +269,44 @@ export class Game {
     } else {
       return false;
     }
+    const targetId = targetBody.plugin.molecule.substanceId;
     // 中性子同士がぶつかっても何も起きない。
-    if (isNeutron(targetBody.plugin.molecule.substanceId)) return false;
+    if (isNeutron(targetId)) return false;
 
-    const fission = findFission(targetBody.plugin.molecule.substanceId);
-    if (!fission) return false;
+    // まず核分裂を試す。ダメなら中性子捕獲を試す。どちらでもなければ何もしない。
+    const fission = findFission(targetId);
+    if (fission) {
+      this.pendingMerge.add(neutronBody.id);
+      this.pendingMerge.add(targetBody.id);
+      this._fission(neutronBody, targetBody, fission);
+      return true;
+    }
 
-    this.pendingMerge.add(neutronBody.id);
-    this.pendingMerge.add(targetBody.id);
-    this._fission(neutronBody, targetBody, fission);
-    return true;
+    const capturedId = findNeutronCapture(targetId);
+    if (capturedId) {
+      this.pendingMerge.add(neutronBody.id);
+      this.pendingMerge.add(targetBody.id);
+      this._captureNeutron(neutronBody, targetBody, capturedId);
+      return true;
+    }
+
+    return false;
+  }
+
+  // 中性子捕獲: 中性子とターゲット(U238)を消し、捕獲後の核種(U239)をその場に生成する。
+  // 核分裂と違って破片や中性子は放出されず、静かに重い核種へ変わる。
+  _captureNeutron(neutronBody, targetBody, capturedId) {
+    const x = targetBody.position.x;
+    const y = targetBody.position.y;
+
+    World.remove(this.world, [neutronBody, targetBody]);
+    this.pendingMerge.delete(neutronBody.id);
+    this.pendingMerge.delete(targetBody.id);
+
+    const newBody = this._spawnBody(capturedId, x, y, { restitution: 0.15, friction: 0.4 });
+    Body.setVelocity(newBody, { x: (Math.random() - 0.5) * 1.5, y: -1 });
+
+    this.callbacks.onCapture(targetBody.plugin.molecule.substanceId, NEUTRON_ID, capturedId);
   }
 
   // 核分裂: 中性子とターゲット(ウランなど)を消し、破片核種(すり抜け粒子)を
@@ -403,6 +440,30 @@ export class Game {
       if (offscreen || expired) {
         World.remove(this.world, body);
       }
+    }
+  }
+
+  // 時間差崩壊する核種(U239→Pu239など)を、崩壊時刻を過ぎたら崩壊先へ置き換える。
+  _checkDecay() {
+    const now = Date.now();
+    const bodies = this.world.bodies.filter(
+      (b) => b.plugin.molecule && b.plugin.molecule.decayAt != null
+    );
+
+    for (const body of bodies) {
+      if (this.pendingMerge.has(body.id)) continue;
+      const molecule = body.plugin.molecule;
+      if (now < molecule.decayAt) continue;
+
+      const fromId = molecule.substanceId;
+      const toId = molecule.decayTo;
+      const { x, y } = body.position;
+      const velocity = { x: body.velocity.x, y: body.velocity.y };
+      World.remove(this.world, body);
+      const newBody = this._spawnBody(toId, x, y, { restitution: 0.15, friction: 0.4 });
+      Body.setVelocity(newBody, velocity);
+
+      this.callbacks.onDecay(fromId, toId);
     }
   }
 

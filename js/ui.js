@@ -115,6 +115,41 @@ export class UI {
     }
   }
 
+  // 核分裂ではない核変化(中性子捕獲・β崩壊)のポップアップ表示。
+  // エネルギー表示はせず、変化を式と一言コメントで見せる。
+  showNuclearChangePopup(leftIds, rightIds, comment) {
+    clearTimeout(this.popupTimer);
+    const equation = this._reactionEquationTeX(leftIds, rightIds);
+
+    this.popupEl.innerHTML = "";
+    const equationEl = document.createElement("div");
+    equationEl.className = "popup-equation";
+    katex.render(equation, equationEl, { throwOnError: false });
+    this.popupEl.appendChild(equationEl);
+
+    const factEl = document.createElement("div");
+    factEl.className = "popup-fact";
+    factEl.textContent = comment;
+    this.popupEl.appendChild(factEl);
+
+    this.popupEl.classList.add("show");
+    this.popupTimer = setTimeout(() => {
+      this.popupEl.classList.remove("show");
+    }, 4200);
+  }
+
+  // 核変化(中性子捕獲・β崩壊)の式を反応ログの先頭に積み上げる。
+  addNuclearChangeLog(leftIds, rightIds) {
+    const equation = this._reactionEquationTeX(leftIds, rightIds);
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+    katex.render(equation, entry, { throwOnError: false });
+    this.logEl.insertBefore(entry, this.logEl.firstChild);
+    while (this.logEl.children.length > MAX_LOG_ENTRIES) {
+      this.logEl.removeChild(this.logEl.lastChild);
+    }
+  }
+
   // 大きな数を「1.93×10¹⁰」のような指数表記の文字列にする。
   // 1万未満はそのまま整数で返す(化学反応レベルの値まで壊さないため)。
   _formatBigNumber(value) {

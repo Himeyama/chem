@@ -47,7 +47,13 @@ export const SUBSTANCES = {
   NH3:  { formula: "NH3",  name: "アンモニア",       molarMass: 17,  color: "#7e57c2", fact: "刺激臭のある気体で肥料の原料になるよ" },
 
   // レア元素。ウランは核分裂の燃料、中性子はそれを引き起こす粒子。
-  U:   { formula: "U",   name: "ウラン原子",       molarMass: 238, color: "#43a047", fact: "原子力発電の燃料になる重い放射性元素" },
+  // ウランには同位体があり、核分裂しやすいU235と、しにくいU238で挙動が異なる。
+  // 質量数はUnicode上付き数字で化学式の前に付ける(²³⁵U のように表示される)。
+  U235:{ formula: "²³⁵U", name: "ウラン235",     molarMass: 235, color: "#66bb6a", fact: "核分裂しやすい、原子力発電の主役になるウラン" },
+  U238:{ formula: "²³⁸U", name: "ウラン238",     molarMass: 238, color: "#2e7d32", fact: "天然ウランのほとんどを占める、核分裂しにくいウラン" },
+  // U238が中性子を捕らえてできる。β崩壊で少し経つとプルトニウム239に変わる。
+  U239:{ formula: "²³⁹U", name: "ウラン239",     molarMass: 239, color: "#00897b", fact: "中性子を吸ったウラン。すぐ崩壊してプルトニウムになる" },
+  Pu239:{ formula: "²³⁹Pu", name: "プルトニウム239", molarMass: 239, color: "#c62828", fact: "U238から生まれる、核分裂する人工の元素" },
   // 中性子は電荷を持たない粒子。分子量ではなく質量数1として扱い、見た目は小さくする。
   n:   { formula: "n",   name: "中性子",           molarMass: 1,   color: "#eeeeee", fact: "原子核の中にある電気を帯びていない粒子" },
 
@@ -116,12 +122,15 @@ const RECIPES = [
   // N2 + 3H2 -> 2NH3 の4体反応で一気にアンモニアを2個作る。
   [["N2", "H2", "H2", "H2"], ["NH3", "NH3"], 92], // N2 + 3H2 -> 2NH3
 
-  // ウランのフッ素化(ウラン濃縮で使う六フッ化ウランUF6へ逐次付加)
-  [["U", "F2"], ["UF2"], 1100],
+  // ウランのフッ素化(ウラン濃縮で使う六フッ化ウランUF6へ逐次付加)。
+  // 現実の濃縮は同位体を区別せずUF6にするので、U235・U238どちらからも作れる。
+  [["U235", "F2"], ["UF2"], 1100],
+  [["U238", "F2"], ["UF2"], 1100],
   [["UF2", "F2"], ["UF4"], 900],
   [["UF4", "F2"], ["UF6"], 500],
   // ウランの塩素化
-  [["U", "Cl2"], ["UCl2"], 800],
+  [["U235", "Cl2"], ["UCl2"], 800],
+  [["U238", "Cl2"], ["UCl2"], 800],
   [["UCl2", "Cl2"], ["UCl4"], 600],
 
   // 炭素の連鎖からベンゼンへ。不安定なC2・C4H4は経由しない。
@@ -130,10 +139,13 @@ const RECIPES = [
 ];
 
 // 中性子はどの反応レシピにも「反応物」として登場させない。
-// 通常の合体反応(2物質→1物質)ではなく、game.js側で特別扱いする「核分裂」の
-// トリガーとしてのみ使うため。以下は中性子がぶつかったときに核分裂する物質の定義。
+// 通常の合体反応(2物質→1物質)ではなく、game.js側で特別扱いする「核反応」の
+// トリガーとしてのみ使うため。中性子が当たったときの挙動は同位体で異なる:
+//   - U235・Pu239 … 即座に核分裂する(FISSION_TARGETS)
+//   - U238        … 中性子を捕獲してU239になる(NEUTRON_CAPTURE)。U239は
+//                    時間差でβ崩壊してPu239になる(DECAYS)
 //
-// トリガー物質ID → { outcomes: [分裂パターン...] }。
+// FISSION_TARGETS: トリガー物質ID → { energyKJ, outcomes: [分裂パターン...] }。
 // 実際の核分裂は破片核種の組み合わせが確率的に変わるので、代表的な分裂パターンを
 // 複数用意し、各パターンの weight(重み)で確率的に1つ選ぶ。
 // 各パターン: { fragments: [生成核種ID...], neutrons: 放出中性子数, weight: 相対確率 }
@@ -142,21 +154,40 @@ const RECIPES = [
 //   200e6 eV × 1.602e-19 J/eV × 6.022e23 /mol ≒ 1.93e13 J/mol = 1.93e10 kJ/mol
 // 化学反応(数百kJ/mol)の約1億倍という、核エネルギーの桁違いの大きさを表す。
 // エネルギーはどのパターンでもほぼ同じなのでターゲット共通で持たせる。
+const FISSION_OUTCOMES = [
+  // バリウム + クリプトン + 3n(教科書で最も有名なU-235の分裂)。
+  { fragments: ["Ba", "Kr"], neutrons: 3, weight: 4 },
+  // キセノン + ストロンチウム + 2n。
+  { fragments: ["Xe", "Sr"], neutrons: 2, weight: 3 },
+  // ヨウ素 + イットリウム + 2n。
+  { fragments: ["I", "Y"], neutrons: 2, weight: 2 },
+  // セシウム + ルビジウム + 2n。
+  { fragments: ["Cs", "Rb"], neutrons: 2, weight: 1 },
+];
 export const FISSION_TARGETS = {
-  U: {
-    energyKJ: 1.93e10,
-    outcomes: [
-      // バリウム + クリプトン + 3n(教科書で最も有名なU-235の分裂)。
-      { fragments: ["Ba", "Kr"], neutrons: 3, weight: 4 },
-      // キセノン + ストロンチウム + 2n。
-      { fragments: ["Xe", "Sr"], neutrons: 2, weight: 3 },
-      // ヨウ素 + イットリウム + 2n。
-      { fragments: ["I", "Y"], neutrons: 2, weight: 2 },
-      // セシウム + ルビジウム + 2n。
-      { fragments: ["Cs", "Rb"], neutrons: 2, weight: 1 },
-    ],
-  },
+  U235: { energyKJ: 1.93e10, outcomes: FISSION_OUTCOMES },
+  Pu239: { energyKJ: 1.93e10, outcomes: FISSION_OUTCOMES },
 };
+
+// 中性子捕獲: 核分裂せず中性子を吸って別の核種に変わる反応。
+// トリガー物質ID → 捕獲後の物質ID。U238 + n -> U239。
+export const NEUTRON_CAPTURE = {
+  U238: "U239",
+};
+
+// 時間差崩壊: 生成後、一定時間経つと自動的に別の核種へ変わる(β崩壊など)。
+// 物質ID → { to: 変化後の物質ID, afterMs: 崩壊までの時間 }。U239 -> Pu239。
+export const DECAYS = {
+  U239: { to: "Pu239", afterMs: 2500 },
+};
+
+export function findNeutronCapture(id) {
+  return NEUTRON_CAPTURE[id] ?? null;
+}
+
+export function findDecay(id) {
+  return DECAYS[id] ?? null;
+}
 
 // 中性子(すり抜ける特殊粒子)の物質ID。
 export const NEUTRON_ID = "n";
@@ -251,10 +282,10 @@ export function findReactionForSet(ids) {
 // Caは反応相手がO2・F2・Cl2に限られ他より合体しにくいため、登場回数を減らして
 // 出現頻度そのものを下げている(重み付き抽選)。
 //
-// レア元素の中性子(n)は「炭素の半分」、ウラン(U)はさらにその半分
-// (=炭素の1/4)の出現頻度にしたい。重み付き抽選なので、配列に登場する回数で
-// 頻度を表す。基準として炭素(C)を4回登場させ、中性子はその半分の2回、
-// ウランはさらに半分の1回にしている。他の既存物質も比率を保つため4倍にしている。
+// レア元素の中性子(n)は「炭素の半分」、ウランはさらにその半分(=炭素の1/4)の
+// 出現頻度にしたい。重み付き抽選なので、配列に登場する回数で頻度を表す。
+// ウランは同位体で分け、現実の天然ウラン(99%以上がU238)に合わせてU238を多く、
+// 核分裂性のU235を希少にする(U238を複数回・U235を1回)。
 export const INITIAL_SUBSTANCE_IDS = [
   "H2", "H2", "H2", "H2", "H2", "H2", "H2", "H2",
   "O2", "O2", "O2", "O2",
@@ -266,7 +297,8 @@ export const INITIAL_SUBSTANCE_IDS = [
   "Ca", "Ca", "Ca", "Ca",
   "S2", "S2", "S2", "S2",
   "n", "n", // レア: 炭素の半分の頻度
-  "U", // レア: 中性子のさらに半分(炭素の1/4)の頻度
+  "U238", "U238", "U238", // 天然ウランの大部分。核分裂しにくい
+  "U235", // 希少な核分裂性ウラン
 ];
 
 // どの反応レシピにも「反応物」として登場しない物質のIDの集合。
@@ -280,9 +312,16 @@ const REACTANT_IDS = new Set();
 for (const [reactants] of RECIPES) {
   for (const id of reactants) REACTANT_IDS.add(id);
 }
+// 核反応に関わる物質(中性子で核分裂/捕獲するターゲット、時間差崩壊する核種)は
+// 「これ以上反応しない終端物質」ではないので、時間消滅の対象から除外する。
+const NUCLEAR_ACTIVE_IDS = new Set([
+  ...Object.keys(FISSION_TARGETS), // 中性子で核分裂する(U235・Pu239)
+  ...Object.keys(NEUTRON_CAPTURE), // 中性子を捕獲する(U238)
+  ...Object.keys(DECAYS), // 時間差で別核種に崩壊する(U239)
+]);
 export const TERMINAL_SUBSTANCE_IDS = new Set(
   Object.keys(SUBSTANCES).filter(
-    (id) => !REACTANT_IDS.has(id) && !isPassthrough(id)
+    (id) => !REACTANT_IDS.has(id) && !isPassthrough(id) && !NUCLEAR_ACTIVE_IDS.has(id)
   )
 );
 

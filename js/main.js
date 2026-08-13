@@ -23,6 +23,14 @@ function startGame() {
       ui.addFissionLog(targetId, neutronId, fragmentIds, neutronCount);
       ui.showFissionPopup(targetId, neutronId, fragmentIds, neutronCount, energyKJ, points);
     },
+    onCapture: (targetId, neutronId, capturedId) => {
+      ui.showNuclearChangePopup([targetId, neutronId], [capturedId], "中性子を捕まえたよ");
+      ui.addNuclearChangeLog([targetId, neutronId], [capturedId]);
+    },
+    onDecay: (fromId, toId) => {
+      ui.showNuclearChangePopup([fromId], [toId], "β崩壊で別の元素に変わったよ");
+      ui.addNuclearChangeLog([fromId], [toId]);
+    },
     onNextChange: (substanceId) => {
       ui.updateNext(substanceId);
     },

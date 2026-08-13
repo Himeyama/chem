@@ -30,11 +30,21 @@ export function shadeColor(hex, percent) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+// Unicode上付き数字(²³⁵など)を通常の数字に戻す対応表。
+const SUPERSCRIPT_DIGITS = { "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9" };
+
 // 化学式の数字を下付き文字に変換し、KaTeXでレンダリングできるTeX文字列にする。
 // 例: "H2O" -> "\\mathrm{H_{2}O}"
+// 質量数などのUnicode上付き数字(例: "²³⁵U")は前置の上付き "^{235}" に変換する。
 export function formulaToTeX(formula) {
-  const subscripted = formula.replace(/(\d+)/g, "_{$1}");
-  return `\\mathrm{${subscripted}}`;
+  // 先頭の連続したUnicode上付き数字を質量数とみなし、TeXの上付きに変換する。
+  let tex = formula.replace(/^([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/, (_, sup) => {
+    const digits = [...sup].map((ch) => SUPERSCRIPT_DIGITS[ch]).join("");
+    return `^{${digits}}`;
+  });
+  // 通常の数字は下付きにする。
+  tex = tex.replace(/(\d+)/g, "_{$1}");
+  return `\\mathrm{${tex}}`;
 }
 
 const FORMULA_FONT_FAMILY = "Georgia, 'Times New Roman', serif";
