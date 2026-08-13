@@ -30,6 +30,16 @@ export class UI {
 
     this.popupTimer = null;
     this.highscoreEl.textContent = getHighscore();
+
+    // 「次の物質」Canvasはイベント時にしか描き直さないため、Webフォント(Noto Serif JP)
+    // の読み込みが間に合わないと王水などの日本語が一瞬フォールバック表示になる。
+    // フォント読み込み完了後に、最後に表示した物質をもう一度描き直して確実に反映する。
+    this.lastNextId = null;
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        if (this.lastNextId) this.updateNext(this.lastNextId);
+      });
+    }
   }
 
   updateScore(total) {
@@ -227,6 +237,7 @@ export class UI {
   }
 
   updateNext(substanceId) {
+    this.lastNextId = substanceId;
     const substance = SUBSTANCES[substanceId];
     const ctx = this.nextCtx;
     ctx.clearRect(0, 0, 100, 100);

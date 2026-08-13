@@ -47,7 +47,10 @@ export function formulaToTeX(formula) {
   return `\\mathrm{${tex}}`;
 }
 
-const FORMULA_FONT_FAMILY = "Georgia, 'Times New Roman', serif";
+// ラテン文字は従来どおり Georgia などの欧文セリフで描画し、王水のような日本語を
+// 含む物質名は Noto Serif JP にフォールバックさせる。Georgia は日本語グリフを持たない
+// ため、ファミリー末尾に Noto Serif JP を加えるだけで漢字だけがこのフォントで描かれる。
+const FORMULA_FONT_FAMILY = "Georgia, 'Times New Roman', 'Noto Serif JP', serif";
 
 // 化学式文字列を「文字」と「数字(下付き)」のトークンに分割する。
 // 例: "Ca(OH)2" -> [{text:"Ca(OH)", sub:false}, {text:"2", sub:true}]
