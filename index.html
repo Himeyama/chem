@@ -27,8 +27,10 @@
       <div id="nextFact" class="next-fact"></div>
     </div>
     <div class="log-box">
-      <div class="log-label">反応式</div>
-      <div id="reactionLog" class="reaction-log"></div>
+      <div class="log-inner">
+        <div class="log-label">反応式</div>
+        <div id="reactionLog" class="reaction-log"></div>
+      </div>
     </div>
   </div>
 
@@ -37,6 +39,17 @@
     <div id="reactionPopup" class="reaction-popup"></div>
   </div>
 </main>
+
+<footer class="help-box">
+  <div class="help-label">遊び方</div>
+  <ul class="help-list">
+    <li>マウスやタップで狙いを定め、クリック / タップで玉を落とそう。</li>
+    <li>反応する組み合わせがぶつかると、新しい物質に変化するよ。</li>
+    <li>発熱反応でスコア加算、吸熱反応で減点（1&thinsp;kJ/mol = 1000&thinsp;pt）。</li>
+    <li>これ以上反応しない物質は、しばらくすると自動的に消えるよ。</li>
+    <li>玉が容器の上端を越えるとゲームオーバー！</li>
+  </ul>
+</footer>
 
 <div id="gameOverModal" class="modal hidden">
   <div class="modal-content">

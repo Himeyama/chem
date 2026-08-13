@@ -128,11 +128,14 @@ export class Game {
     return pickInitialSubstance();
   }
 
-  // ?debug=nuclear のときだけ中性子とウラン同位体(U235・U238)に絞ったプールを返す。
-  // 核分裂と中性子捕獲→崩壊の両方を試せるようにする。通常時はnull(重み付き抽選)。
+  // ?debug=... のときだけ、特定の物質に絞ったプールを返す(均等抽選される)。
+  //   nuclear … 中性子とウラン同位体(U235・U238)。核分裂と中性子捕獲→崩壊を試せる。
+  //   h2o     … 水素(H2)と酸素(O2)のみ。水の生成(2H2 + O2 -> 2H2O)を試せる。
+  // 通常時はnull(重み付き抽選)。
   _resolveDebugPool() {
     const debug = new URLSearchParams(window.location.search).get("debug");
     if (debug === "nuclear") return [NEUTRON_ID, "U235", "U238"];
+    if (debug === "h2o") return ["H2", "O2"];
     return null;
   }
 

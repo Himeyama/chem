@@ -2,10 +2,6 @@
   box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
-}
-
 body {
   margin: 0;
   padding: 16px;
@@ -43,24 +39,30 @@ body {
 }
 
 .game-wrap {
-  display: flex;
+  /* Grid で「サイドパネル | キャンバス」の2列を組み、行の高さをキャンバス高さ
+     (--canvas-h)に固定する。行を固定トラック(単一の長さ)にするのが要点で、これにより
+     行が内容(反応式の履歴)で膨らむのを防げる。minmax(0, ...) だと実装によっては行が
+     コンテンツ基準で伸びてしまうため、必ず固定値にする。行高さが確定するのでサイドパネルは
+     この高さを超えられず、内部の reaction-log が確実にスクロールし、フッターも押し出されない。 */
+  display: grid;
+  grid-template-columns: var(--side-panel-w) var(--canvas-w);
+  grid-template-rows: var(--canvas-h);
   gap: var(--game-gap);
-  align-items: flex-start;
   justify-content: center;
   max-width: 1020px;
   width: 100%;
-  min-height: 0;
-  flex: 1;
 }
 
 .side-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: var(--side-panel-w);
-  flex-shrink: 0;
-  height: var(--canvas-h);
+  /* グリッドセル(高さ=minmax(0,--canvas-h))の高さに固定する。height:100%で高さを
+     確定させ、min-height:0 で内容による膨張を防ぐことで、内部の reaction-log に高さが
+     伝わってスクロールが効く。 */
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .score-bar {
@@ -139,6 +141,21 @@ body {
   padding: 10px;
   flex: 1;
   min-height: 0;
+  /* 内側の log-inner を position:absolute で通常フローから抜くための位置基準にする。
+     こうすることで、ログ件数が増えても内側コンテンツの高さが親(side-panel→game-wrap
+     の grid コンテナ)のサイズ計算に伝播せず、フッター(遊び方)が押し下げられない。 */
+  position: relative;
+  overflow: hidden;
+}
+
+.log-inner {
+  /* log-box の内側(padding の内枠)いっぱいに絶対配置し、通常フローから外す。
+     ラベルとログを縦に並べ、ログ領域だけがスクロールする。 */
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
   display: flex;
   flex-direction: column;
 }
@@ -157,6 +174,10 @@ body {
   gap: 6px;
   min-height: 0;
   flex: 1;
+  /* 高さは親からの伝播(game-wrap の固定行 → side-panel:height100%+overflow →
+     log-box:flex1+min-height0)で確定するため、ここでの max-height 指定は不要。
+     以前は calc(--canvas-h - 260px) で上限を当て込んでいたが、縦長画面では見積もりが
+     甘く reaction-log がはみ出してフッター(遊び方)を押し下げる原因になっていた。 */
 }
 
 .log-entry {
@@ -180,9 +201,44 @@ body {
   word-break: break-word;
 }
 
+.help-box {
+  background: #262b36;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  width: calc(var(--side-panel-w) + var(--game-gap) + var(--canvas-w));
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.help-label {
+  font-size: 0.85rem;
+  color: #9aa4b2;
+  margin-bottom: 6px;
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: #9aa4b2;
+}
+
+.help-list li {
+  margin-bottom: 4px;
+}
+
+.help-list li:last-child {
+  margin-bottom: 0;
+}
+
 .canvas-area {
   position: relative;
-  width: var(--canvas-w);
+  /* グリッドのセル(列幅=--canvas-w, 行高さ=--canvas-h, 比率は720:960で一致)に収める。 */
+  width: 100%;
+  height: 100%;
   aspect-ratio: 720 / 960;
 }
 
@@ -300,10 +356,15 @@ body {
     font-size: 1.6rem;
   }
   .game-wrap {
-    flex-direction: column-reverse;
+    /* 狭い画面では1列に積む。行高さの固定を解除し(auto)、キャンバスを上に置く。 */
+    grid-template-columns: var(--canvas-w);
+    grid-template-rows: auto auto;
     align-items: center;
     gap: 10px;
     margin-top: 4px;
+  }
+  .canvas-area {
+    order: -1; /* HTML順ではサイドパネルが先なので、キャンバスを上に持ってくる */
   }
   .side-panel {
     width: var(--canvas-w);
