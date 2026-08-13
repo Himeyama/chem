@@ -283,23 +283,36 @@ export function findReactionForSet(ids) {
 // 出現頻度そのものを下げている(重み付き抽選)。
 //
 // レア元素の中性子(n)は「炭素の半分」、ウランはさらにその半分(=炭素の1/4)の
-// 出現頻度にしたい。重み付き抽選なので、配列に登場する回数で頻度を表す。
-// ウランは同位体で分け、現実の天然ウラン(99%以上がU238)に合わせてU238を多く、
-// 核分裂性のU235を希少にする(U238を複数回・U235を1回)。
-export const INITIAL_SUBSTANCE_IDS = [
-  "H2", "H2", "H2", "H2", "H2", "H2", "H2", "H2",
-  "O2", "O2", "O2", "O2",
-  "N2", "N2", "N2", "N2",
-  "C", "C", "C", "C",
-  "Cl2", "Cl2", "Cl2", "Cl2", "Cl2", "Cl2", "Cl2", "Cl2",
-  "Na", "Na", "Na", "Na",
-  "F2", "F2", "F2", "F2", "F2", "F2", "F2", "F2",
-  "Ca", "Ca", "Ca", "Ca",
-  "S2", "S2", "S2", "S2",
-  "n", "n", // レア: 炭素の半分の頻度
-  "U238", "U238", "U238", // 天然ウランの大部分。核分裂しにくい
-  "U235", // 希少な核分裂性ウラン
-];
+// 出現頻度にしたい。重み付き抽選で、値がそのまま相対的な出現頻度になる。
+// ウラン枠(合計4)は、現実の天然ウランの同位体存在比(U235: 0.72%, U238: 99.28%)で
+// U235とU238に配分している。そのためU235は極めて希にしか降ってこない。
+const URANIUM_WEIGHT = 4; // ウラン全体の出現重み(炭素の1/4)
+export const INITIAL_SUBSTANCE_WEIGHTS = {
+  H2: 8,
+  O2: 4,
+  N2: 4,
+  C: 4,
+  Cl2: 8,
+  Na: 4,
+  F2: 8,
+  Ca: 4, // 反応相手が限られ溜まりやすいので少なめ
+  S2: 4,
+  n: 2, // レア: 炭素の半分
+  U235: URANIUM_WEIGHT * 0.0072, // 天然存在比0.72%。希少な核分裂性ウラン
+  U238: URANIUM_WEIGHT * 0.9928, // 天然存在比99.28%。核分裂しにくい大部分
+};
+
+// 重み付き抽選で降ってくる物質のIDを1つ選ぶ。
+export function pickInitialSubstance() {
+  const entries = Object.entries(INITIAL_SUBSTANCE_WEIGHTS);
+  const total = entries.reduce((sum, [, w]) => sum + w, 0);
+  let r = Math.random() * total;
+  for (const [id, w] of entries) {
+    r -= w;
+    if (r < 0) return id;
+  }
+  return entries[entries.length - 1][0]; // 丸め誤差の保険
+}
 
 // どの反応レシピにも「反応物」として登場しない物質のIDの集合。
 // これ以上他の物質と反応しない「終端物質」であり、game.js側で一定時間後に

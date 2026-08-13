@@ -1,7 +1,7 @@
 /* global Matter */
 import {
   SUBSTANCES,
-  INITIAL_SUBSTANCE_IDS,
+  pickInitialSubstance,
   REACTIONS,
   isTerminalSubstance,
   isNeutron,
@@ -40,13 +40,13 @@ export class Game {
     this.world = world;
     this.runner = Runner.create();
 
-    // 降ってくる物質の抽選プール。通常はINITIAL_SUBSTANCE_IDSだが、
-    // URLに ?debug=nuclear を付けたときは中性子とウランのみにして核分裂を試しやすくする。
-    this.dropPool = this._resolveDropPool();
+    // URLに ?debug=nuclear を付けたときは中性子とウランのみに絞って核反応を試しやすくする。
+    // 通常時は重み付き抽選(pickInitialSubstance)で降ってくる物質を選ぶ。
+    this.debugPool = this._resolveDebugPool();
 
     this.aimX = CANVAS_WIDTH / 2;
-    this.currentDropId = pickRandom(this.dropPool);
-    this.nextDropId = pickRandom(this.dropPool);
+    this.currentDropId = this._pickDrop();
+    this.nextDropId = this._pickDrop();
 
     this._setupCanvasResolution();
     this._bindEvents();
@@ -118,16 +118,22 @@ export class Game {
     }, 400);
 
     this.currentDropId = this.nextDropId;
-    this.nextDropId = pickRandom(this.dropPool);
+    this.nextDropId = this._pickDrop();
     this._notifyNext();
   }
 
-  // 降ってくる物質の抽選プールを決める。?debug=nuclear のときだけ中性子とウラン
-  // 同位体(U235・U238)に絞り、核分裂と中性子捕獲→崩壊の両方を試せるようにする。
-  _resolveDropPool() {
+  // 次に降ってくる物質を1つ選ぶ。debugPoolがあれば均等抽選、なければ重み付き抽選。
+  _pickDrop() {
+    if (this.debugPool) return pickRandom(this.debugPool);
+    return pickInitialSubstance();
+  }
+
+  // ?debug=nuclear のときだけ中性子とウラン同位体(U235・U238)に絞ったプールを返す。
+  // 核分裂と中性子捕獲→崩壊の両方を試せるようにする。通常時はnull(重み付き抽選)。
+  _resolveDebugPool() {
     const debug = new URLSearchParams(window.location.search).get("debug");
     if (debug === "nuclear") return [NEUTRON_ID, "U235", "U238"];
-    return INITIAL_SUBSTANCE_IDS;
+    return null;
   }
 
   _notifyNext() {
